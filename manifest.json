@@ -1,0 +1,17 @@
+{
+
+  "manifest_version": 2,
+  "name": "Titta klart",
+  "version": "1.0",
+  "description": "Hjälper dig att hinna se klart en serie innan den försvinner",
+  "content_scripts": [
+    {
+      "matches": ["*://*.svtplay.se/*"],
+      "js": [
+        "moment.min.js",
+        "titta-klart.js"
+      ]
+    }
+  ]
+
+}
