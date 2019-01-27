@@ -12,6 +12,11 @@
         "titta-klart.js"
       ]
     }
-  ]
-
+  ],
+  "background": {
+    "scripts": [
+      "background-script.js"
+    ]
+  },
+  "permissions": ["notifications"]
 }
