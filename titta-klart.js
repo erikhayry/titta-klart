@@ -1,57 +1,59 @@
-var browser = browser || chrome;
-
-console.log('Titta klart')
 moment.locale('se', {
     monthsShort: [
         'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'
     ],
     weekdaysShort : [
-        "Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"
+        'Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'
     ]
 });
 
+function handleCalender(dateString){
+    return dateString
+        .replace('imorgon', moment().day(1).format("ddd"))
+        .replace('ikväll', moment().day(0).format("ddd"))
+}
+
 function checkTempo(){
-  let dateEl = document.querySelectorAll('.play_video-page__meta-data-holder .play_video-page__meta-data-item')[1]
-  let numberOfEpisodes = document.querySelectorAll('[id^="section-sasong"] li').length;
-  let numberOfEpisodesWatched = document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length
+    const dateEl = document.querySelectorAll('.play_video-page__meta-data-holder .play_video-page__meta-data-item')[1];
+    const titleEl = document.querySelectorAll('.play_video-page__title-element')[0];
+    const numberOfEpisodes = document.querySelectorAll('[id^="section-sasong"] li').length || document.querySelectorAll('[class^="play_related-list lp_"] li').length;
+    const numberOfEpisodesWatched = document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length || document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
 
-  console.log(dateEl, numberOfEpisodes, numberOfEpisodesWatched)
+    if(dateEl && numberOfEpisodes > 0){
+        const dateString = dateEl.textContent.split(' (')[0];
+        const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
+        const dateFormatted = moment(handleCalender(dateString), ['ddd D MMM H.m', 'D MMM H.m', 'ddd H.m']);
 
-  if(dateEl && numberOfEpisodes > 0){
-    let dateString = dateEl.textContent.split(' (')[0];
-    let numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
-    let dateFormatted = moment(dateString, "ddd D MMM H.m");
+        if(dateFormatted.isValid()){
+            const daysLeft = moment(dateFormatted).diff(moment(), 'days');
+            const title = titleEl ? titleEl.textContent : 'den här serien';
+            let message = '';
 
-    if(dateFormatted.isValid()){
-      let daysLeft = moment(dateFormatted).diff(moment(), 'days');
-      let message = 'Kan inte räkna ut tempo, fel datumformat';
+            if(daysLeft > numberOfEpisodesLeft){
+                message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
 
-      console.log(dateFormatted, daysLeft)
+            } else {
+                const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
+                message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
+            }
 
-      if(daysLeft > numberOfEpisodesLeft){
-          message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart serien`;
+            if(typeof browser !== 'undefined') {
+                browser.runtime.sendMessage({'daysLeft': message});
 
-      } else {
-          message = `Du behöver se minst ${numberOfEpisodesLeft/daysLeft} avsnitt varje dag för att hinna se klart serien`;
-          browser.runtime.sendMessage({"daysLeft": message});
-      }
-
-        browser.runtime.sendMessage({"daysLeft": message});
-        console.log(message)
+            } else if(typeof chrome !== 'undefined'){
+                chrome.runtime.sendMessage({'daysLeft': message});
+            }
+        } else {
+            console.log(`Datum ${dateString} är i fel format`);
+        }
     }
-
-
-
-  } else {
-    console.log('Kan inte räkna ut tempo')
-  }
 }
 
 new MutationObserver(function() {
-  setTimeout(function(){
-    checkTempo();    
-  }, 2000)  
-}).observe(document.querySelector('title'),{ childList: true });
+    setTimeout(function(){
+        checkTempo();
+    }, 2000)
+}).observe(document.querySelector('title'), { childList: true });
 
 
 checkTempo();

@@ -4,6 +4,9 @@
   "name": "Titta klart",
   "version": "1.0",
   "description": "Hjälper dig att hinna se klart en serie innan den försvinner",
+  "icons": {
+    "48": "icons/link-48.png"
+  },
   "content_scripts": [
     {
       "matches": ["*://*.svtplay.se/*"],
