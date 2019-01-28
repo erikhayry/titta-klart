@@ -1,3 +1,7 @@
+Sentry.init({
+    dsn: 'https://119e710167b34a6a877b58ad0610f6f7@sentry.io/1381535'
+});
+
 moment.locale('se', {
     monthsShort: [
         'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'
@@ -13,39 +17,53 @@ function handleCalender(dateString){
         .replace('ikväll', moment().day(0).format("ddd"))
 }
 
+
 function checkTempo(){
-    const dateEl = document.querySelectorAll('.play_video-page__meta-data-holder .play_video-page__meta-data-item')[1];
-    const titleEl = document.querySelectorAll('.play_video-page__title-element')[0];
-    const numberOfEpisodes = document.querySelectorAll('[id^="section-sasong"] li').length || document.querySelectorAll('[class^="play_related-list lp_"] li').length;
-    const numberOfEpisodesWatched = document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length || document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
+    const numberOfSlashes = (location.href.match(/\//g) || []).length;
+    const numberOfVideoAndSlashes = (location.href.match(/\/video\//g) || []).length;
 
-    if(dateEl && numberOfEpisodes > 0){
-        const dateString = dateEl.textContent.split(' (')[0];
-        const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
-        const dateFormatted = moment(handleCalender(dateString), ['ddd D MMM H.m', 'D MMM H.m', 'ddd H.m']);
+    if(numberOfVideoAndSlashes === 1 && numberOfSlashes === 6){
+        const dateEl = document.querySelectorAll('.play_video-page__meta-data-holder .play_video-page__meta-data-item')[1];
+        const titleEl = document.querySelectorAll('.play_video-page__title-element')[0];
+        const numberOfEpisodes = document.querySelectorAll('[id^="section-sasong"] li').length || document.querySelectorAll('[class^="play_related-list lp_"] li').length;
+        const numberOfEpisodesWatched = document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length || document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
 
-        if(dateFormatted.isValid()){
-            const daysLeft = moment(dateFormatted).diff(moment(), 'days');
-            const title = titleEl ? titleEl.textContent : 'den här serien';
-            let message = '';
+        if(dateEl && numberOfEpisodes > 0){
+            const dateString = dateEl.textContent.split(' (')[0];
+            const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
+            const dateFormatted = moment(handleCalender(dateString), ['ddd D MMM H.m', 'D MMM H.m', 'ddd H.m']);
 
-            if(daysLeft > numberOfEpisodesLeft){
-                message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
+            if(dateFormatted.isValid()){
+                const title = titleEl ? titleEl.textContent : 'den här serien';
+                const daysLeft = moment(dateFormatted).diff(moment(), 'days');
+                let message = '';
 
+                if(daysLeft > numberOfEpisodesLeft){
+                    message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
+
+                } else {
+                    const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
+                    message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
+                }
+
+                if(typeof browser !== 'undefined') {
+                    browser.runtime.sendMessage({'daysLeft': message});
+
+                } else if(typeof chrome !== 'undefined'){
+                    chrome.runtime.sendMessage({'daysLeft': message});
+                }
             } else {
-                const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
-                message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
-            }
-
-            if(typeof browser !== 'undefined') {
-                browser.runtime.sendMessage({'daysLeft': message});
-
-            } else if(typeof chrome !== 'undefined'){
-                chrome.runtime.sendMessage({'daysLeft': message});
+                const error = `Date "${dateString}" is in wrong format`;
+                Sentry.captureMessage(error);
+                console.log(error);
             }
         } else {
-            console.log(`Datum ${dateString} är i fel format`);
+            const error = 'Unable to calculate tempo';
+            Sentry.captureMessage(error);
+            console.log(error);
         }
+    } else {
+        console.log('ignore')
     }
 }
 

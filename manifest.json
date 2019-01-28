@@ -11,6 +11,7 @@
     {
       "matches": ["*://*.svtplay.se/*"],
       "js": [
+        "sentry.min.js",
         "moment.min.js",
         "titta-klart.js"
       ]
@@ -20,6 +21,6 @@
     "scripts": [
       "background-script.js"
     ]
-  },
+},
   "permissions": ["notifications"]
 }
