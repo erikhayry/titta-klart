@@ -1,5 +1,9 @@
+const VERSION = '1.0.0';
 Sentry.init({
     dsn: 'https://119e710167b34a6a877b58ad0610f6f7@sentry.io/1381535'
+});
+Sentry.configureScope((scope) => {
+    scope.setTag("version", VERSION);
 });
 
 moment.locale('se', {
@@ -17,6 +21,21 @@ function handleCalender(dateString){
         .replace('ikväll', moment().day(0).format("ddd"))
 }
 
+function notify(message){
+    if(typeof browser !== 'undefined') {
+        browser.runtime.sendMessage({'daysLeft': message});
+
+    } else if(typeof chrome !== 'undefined'){
+        chrome.runtime.sendMessage({'daysLeft': message});
+    } else {
+        Sentry.captureMessage('Unable to send message to background script');
+    }
+}
+
+
+function upperCaseFirstLetter(string = ''){
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 function checkTempo(){
     const numberOfSlashes = (location.href.match(/\//g) || []).length;
@@ -32,11 +51,13 @@ function checkTempo(){
             const dateString = dateEl.textContent.split(' (')[0];
             const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
             const dateFormatted = moment(handleCalender(dateString), ['ddd D MMM H.m', 'D MMM H.m', 'ddd H.m']);
+            const title = titleEl ? titleEl.textContent : 'den här serien';
 
-            if(dateFormatted.isValid()){
-                const title = titleEl ? titleEl.textContent : 'den här serien';
-                const daysLeft = moment(dateFormatted).diff(moment(), 'days');
+            if(dateString === 'Tills vidare'){
+                notify(`${upperCaseFirstLetter(title)} kan ses tills vidare`);
+            } else if(dateFormatted.isValid()){
                 let message = '';
+                const daysLeft = moment(dateFormatted).diff(moment(), 'days');
 
                 if(daysLeft > numberOfEpisodesLeft){
                     message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
@@ -45,25 +66,17 @@ function checkTempo(){
                     const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
                     message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
                 }
-
-                if(typeof browser !== 'undefined') {
-                    browser.runtime.sendMessage({'daysLeft': message});
-
-                } else if(typeof chrome !== 'undefined'){
-                    chrome.runtime.sendMessage({'daysLeft': message});
-                }
+                notify(message);
             } else {
                 const error = `Date "${dateString}" is in wrong format`;
                 Sentry.captureMessage(error);
-                console.log(error);
+                console.error(error);
             }
         } else {
             const error = 'Unable to calculate tempo';
             Sentry.captureMessage(error);
-            console.log(error);
+            console.error(error);
         }
-    } else {
-        console.log('ignore')
     }
 }
 
@@ -73,6 +86,4 @@ new MutationObserver(function() {
     }, 2000)
 }).observe(document.querySelector('title'), { childList: true });
 
-
 checkTempo();
-

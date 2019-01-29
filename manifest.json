@@ -5,14 +5,14 @@
   "version": "1.0",
   "description": "Hjälper dig att hinna se klart en serie innan den försvinner",
   "icons": {
-    "48": "icons/link-48.png"
+    "48": "icons/baseline-live_tv-24px.svg"
   },
   "content_scripts": [
     {
       "matches": ["*://*.svtplay.se/*"],
       "js": [
-        "sentry.min.js",
-        "moment.min.js",
+        "/node_modules/@sentry/browser/build/bundle.min.js",
+        "/node_modules/moment/min/moment.min.js",
         "titta-klart.js"
       ]
     }

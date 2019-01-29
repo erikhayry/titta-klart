@@ -1,0 +1,27 @@
+{
+  "name": "titta-klart",
+  "version": "1.0.0",
+  "description": "Web extension for SVT Play telling you at what speed you need to watch a series before it's pulled from the website",
+  "main": "titta-klart.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erikportin/titta-klart.git"
+  },
+  "keywords": [
+    "svtplay",
+    "web-extension"
+  ],
+  "author": "Erik Portin <erikportin@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/erikportin/titta-klart/issues"
+  },
+  "homepage": "https://github.com/erikportin/titta-klart#readme",
+  "dependencies": {
+    "@sentry/browser": "^4.5.3",
+    "moment": "^2.24.0"
+  }
+}
