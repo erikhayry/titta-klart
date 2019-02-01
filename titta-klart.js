@@ -1,3 +1,4 @@
+console.log('titta klart')
 const VERSION = '1.0.0';
 Sentry.init({
     dsn: 'https://119e710167b34a6a877b58ad0610f6f7@sentry.io/1381535'
@@ -5,21 +6,6 @@ Sentry.init({
 Sentry.configureScope((scope) => {
     scope.setTag("version", VERSION);
 });
-
-moment.locale('se', {
-    monthsShort: [
-        'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'
-    ],
-    weekdaysShort : [
-        'Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'
-    ]
-});
-
-function handleCalender(dateString){
-    return dateString
-        .replace('imorgon', moment().day(1).format("ddd"))
-        .replace('ikväll', moment().day(0).format("ddd"))
-}
 
 function notify(message){
     if(typeof browser !== 'undefined') {
@@ -32,43 +18,85 @@ function notify(message){
     }
 }
 
-
-function upperCaseFirstLetter(string = ''){
-    return string.charAt(0).toUpperCase() + string.slice(1);
+function postData(url = '', data = {}) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    }).then(res => res.json());
 }
 
-function checkTempo(){
-    const numberOfSlashes = (location.href.match(/\//g) || []).length;
-    const numberOfVideoAndSlashes = (location.href.match(/\/video\//g) || []).length;
 
-    if(numberOfVideoAndSlashes === 1 && numberOfSlashes === 6){
-        const dateEl = document.querySelectorAll('.play_video-page__meta-data-holder .play_video-page__meta-data-item')[1];
-        const titleEl = document.querySelectorAll('.play_video-page__title-element')[0];
-        const numberOfEpisodes = document.querySelectorAll('[id^="section-sasong"] li').length || document.querySelectorAll('[class^="play_related-list lp_"] li').length;
-        const numberOfEpisodesWatched = document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length || document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
 
-        if(dateEl && numberOfEpisodes > 0){
-            const dateString = dateEl.textContent.split(' (')[0];
+async function getEpisodeByUrl(url){
+    return postData('https://titta-klart-api.now.sh', {urls: [url]})
+        .then((data) => getEpisode(data[url]))
+        .catch(error => console.error(error));
+}
+
+async function getEpisode(id){
+    return fetch('https://api.svt.se/videoplayer-api/video/' + id)
+        .then(res => res.json())
+        .then(json => {
+            const { rights: { validTo }, episodeTitle, programTitle } = json;
+            return {
+                validTo,
+                episodeTitle,
+                programTitle
+            }
+        })
+        .catch(err => {
+            console.log(err)
+        })
+}
+
+async function checkTempo(){
+    const numberOfSlashesInUrl = (location.href.match(/\//g) || []).length;
+    const numberOfVideoAndSlashesInUrl = (location.href.match(/\/video\//g) || []).length;
+
+    //Is on video page
+    if(numberOfVideoAndSlashesInUrl === 1 && numberOfSlashesInUrl === 6) {
+        const videoEl = document.querySelectorAll('[data-video-id]')[0];
+        const seasonEpisodesEls = document.querySelectorAll('[id^="section-sasong"] li');
+        const episodeEls =  seasonEpisodesEls.length ? seasonEpisodesEls : document.querySelectorAll('[class^="play_related-list lp_"] li');
+        const numberOfEpisodes = episodeEls.length;
+        const numberOfEpisodesWatched =
+            document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length ||
+            document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
+
+        //There is a video and additional content to watch
+        if(videoEl && numberOfEpisodes > 0){
+            const lastEpisodeEl = episodeEls[episodeEls.length - 1];
+            const {validTo, episodeTitle, programTitle} = await getEpisode(videoEl.attributes['data-video-id'].value);
             const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
-            const dateFormatted = moment(handleCalender(dateString), ['ddd D MMM H.m', 'D MMM H.m', 'ddd H.m']);
-            const title = titleEl ? titleEl.textContent : 'den här serien';
+            const title = programTitle + ' - ' + episodeTitle;
 
-            if(dateString === 'Tills vidare'){
-                notify(`${upperCaseFirstLetter(title)} kan ses tills vidare`);
-            } else if(dateFormatted.isValid()){
-                let message = '';
-                const daysLeft = moment(dateFormatted).diff(moment(), 'days');
+            //Cur
+            if(validTo){
+                const lastEpisodeValidToDate = await getEpisodeByUrl(lastEpisodeEl.getElementsByTagName('a')[0].href);
 
-                if(daysLeft > numberOfEpisodesLeft){
-                    message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
+                //This video and the last one of the seaons got the same valid to date so we assume all videos got the same date
+                if(validTo === lastEpisodeValidToDate.validTo){
+                    let message = '';
+                    const daysLeft = moment(validTo).diff(moment(), 'days');
 
+                    if(daysLeft > numberOfEpisodesLeft){
+                        message = `Du behöver se ett avsnitt var ${Math.floor(daysLeft/numberOfEpisodesLeft)} dag för att hinna se klart säsongen av ${title}`;
+
+                    } else {
+                        const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
+                        message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
+                    }
+                    notify(message);
                 } else {
-                    const numberOfEpisodesPerDay = daysLeft === 0 ? numberOfEpisodesLeft : numberOfEpisodesLeft/daysLeft;
-                    message = `Du behöver se minst ${numberOfEpisodesPerDay} avsnitt varje dag för att hinna se klart säsongen av ${title}`;
+                    //TODO handle different valid to dates (calendar ics, notify end of video, browser push)
+                    const error = `validTo date is different for episodes`;
+                    console.log(error);
                 }
-                notify(message);
             } else {
-                const error = `Date "${dateString}" is in wrong format`;
+                const error = `validTo date "${validTo}" is missing`;
                 Sentry.captureMessage(error);
                 console.error(error);
             }
@@ -86,4 +114,4 @@ new MutationObserver(function() {
     }, 2000)
 }).observe(document.querySelector('title'), { childList: true });
 
-checkTempo();
+checkTempo()

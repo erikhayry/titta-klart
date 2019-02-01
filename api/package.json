@@ -6,14 +6,13 @@
   "scripts": {
     "lib": "./node_modules/.bin/babel *.js --out-dir lib --presets=@babel/env ",
     "api": "npm run lib && node lib/api.js",
-    "start": "micro -p 3005"
+    "start": "micro -p 3002"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@babel/polyfill": "^7.0.0",
     "crawler": "^1.2.0",
-    "node-fetch": "^2.3.0",
     "micro": "latest",
     "micro-cors": "^0.1.1",
     "microrouter": "^3.1.3",

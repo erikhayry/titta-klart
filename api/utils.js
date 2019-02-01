@@ -1,10 +1,11 @@
 const Crawler = require("crawler");
 
 const CRAWLER_CONF = {
-    maxConnections : 10
+    maxConnections : 10,
+    retries: 1
 };
 
-module.exports = function crawl(onPage, url, onDone){
+module.exports = function crawl(onPage, urls, onDone){
     let result;
     return new Promise((resolve, reject) => {
         const crawler = new Crawler({
@@ -22,7 +23,7 @@ module.exports = function crawl(onPage, url, onDone){
             }
         });
 
-        crawler.queue(url);
+        crawler.queue(urls);
         crawler.on('drain', function() {
             resolve(onDone(result))
         });

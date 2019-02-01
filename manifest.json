@@ -23,5 +23,9 @@
       "background-script.js"
     ]
 },
-  "permissions": ["notifications"]
+  "permissions": [
+    "notifications",
+    "https://titta-klart-api.now.sh/",
+    "https://api.svt.se/*"
+  ]
 }

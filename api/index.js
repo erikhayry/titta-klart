@@ -6,8 +6,7 @@ const api = require('./api.js')
 module.exports = router(
     cors(post('/', async (req, res) => {
         const body = await json(req);
-        const date = await api(body.url);
-        console.log('date', date)
-        send(res, 200, date)
+        const ids = await api(body.urls);
+        send(res, 200, ids)
     }))
 );
