@@ -46,7 +46,7 @@ async function getEpisode(id){
                 validTo,
                 programTitle,
                 episodeTitle,
-                title: programTitle + ' - ' + episodeTitle
+                title: programTitle + ' - ' + episodeTitle,
             }
         })
         .catch(err => {
@@ -82,14 +82,16 @@ function isVideoPage(){
     return numberOfVideoAndSlashesInUrl === 1 && numberOfSlashesInUrl === 6
 }
 
-function getEpisodeNumberAndTotal(){
-    const videoDescriptionEl = document.querySelectorAll('.play_video-page__title-element--description')[0];
+function getEpisodeNumberAndTotal(episodeDescription){
+    const videoDescriptionEl = episodeDescription || document.querySelectorAll('.play_video-page__title-element--description')[0];
     const videoDescription = videoDescriptionEl ? videoDescriptionEl.textContent : '';
     const episodeOfTotal = videoDescription.match(/Del (.*) av (.*)\w/);
-    const [episodeNumber, totalNumberOfEpisodes] = episodeOfTotal && episodeOfTotal.length > 0? episodeOfTotal[0].replace('Del ', '') .split(' av ') : [undefined, undefined];
+    const [episodeNumberAsString, totalNumberOfEpisodesAsString] = episodeOfTotal && episodeOfTotal.length > 0 ?
+        episodeOfTotal[0].replace('Del ', '') .split(' av ') : [undefined, undefined];
 
     return {
-        episodeNumber, totalNumberOfEpisodes
+        episodeNumber: parseInt(episodeNumberAsString),
+        totalNumberOfEpisodes: parseInt(totalNumberOfEpisodesAsString)
     }
 }
 
@@ -97,24 +99,27 @@ function getVideoPage(){
     const videoEl = document.querySelectorAll('[data-video-id]')[0];
     const seasonEpisodesEls = document.querySelectorAll('[id^="section-sasong"] li');
     const episodeEls =  seasonEpisodesEls.length ? seasonEpisodesEls : document.querySelectorAll('[class^="play_related-list lp_"] li');
-    const numberOfEpisodes = episodeEls.length;
+    const numberOfEpisodesAvailable = episodeEls.length;
     const numberOfEpisodesWatched =
         document.querySelectorAll('[id^="section-sasong"] span[aria-valuenow|="100"]').length ||
         document.querySelectorAll('[class^="play_related-list lp_"] span[aria-valuenow|="100"]').length;
     const lastEpisodeEl = episodeEls[episodeEls.length - 1];
-    const numberOfEpisodesLeft = numberOfEpisodes - numberOfEpisodesWatched;
+    const numberOfEpisodesLeft = numberOfEpisodesAvailable - numberOfEpisodesWatched;
     const {episodeNumber, totalNumberOfEpisodes} = getEpisodeNumberAndTotal();
-
-
+    const {episodeNumber: lastEpisodeAvailableEpisodeNumber} = getEpisodeNumberAndTotal(lastEpisodeEl.querySelectorAll('.play_related-item__desc')[0]);
+    const numberOfUpcomingListed = document.querySelectorAll('.lp_kommande li').length;
 
     return {
         videoEl,
         episodeEls,
-        numberOfEpisodes,
+        numberOfEpisodesAvailable,
         lastEpisodeEl,
         numberOfEpisodesLeft,
         episodeNumber,
-        totalNumberOfEpisodes
+        totalNumberOfEpisodes,
+        numberOfUpcomingListed,
+        hasVideoAndAdditionalEpisodes: videoEl && numberOfEpisodesAvailable > 0,
+        isLastEpisodeOfSeasonAvailable: lastEpisodeAvailableEpisodeNumber === totalNumberOfEpisodes
     }
 }
 
@@ -147,26 +152,47 @@ async function handleSeasonWithDifferentValidToDates(episodeEls, videoEl){
             }
         }, true);
     } else {
+        //TODO
+        //const { validTo, title } = await getNextUpcomingEpisode(location.href, episodeEls);
+
         console.log('No more episodes in list')
     }
 }
 
 async function analyzePage(){
+    console.log('analyze')
     GLOBAL_IS_NOTIFIED = false;
 
     if(isVideoPage()) {
-        const { videoEl, episodeEls, numberOfEpisodes, lastEpisodeEl, numberOfEpisodesLeft, episodeNumber, totalNumberOfEpisodes } = getVideoPage();
-        console.log(episodeNumber, totalNumberOfEpisodes);
+        const {
+            videoEl,
+            episodeEls,
+            numberOfEpisodesAvailable,
+            lastEpisodeEl,
+            numberOfEpisodesLeft,
+            episodeNumber,
+            totalNumberOfEpisodes,
+            numberOfUpcomingListed,
+            hasVideoAndAdditionalEpisodes,
+            isLastEpisodeOfSeasonAvailable
+        } = getVideoPage();
+
+        console.log('isLastEpisodeOfSeasonAvailable', isLastEpisodeOfSeasonAvailable);
+
+        if(numberOfEpisodesAvailable < totalNumberOfEpisodes){
+            console.log('missing', numberOfEpisodesAvailable,  numberOfUpcomingListed)
+        }
 
         //There is a video and additional content to watch
-        if(videoEl && numberOfEpisodes > 0) {
+        if(hasVideoAndAdditionalEpisodes) {
             const {validTo, title} = await getEpisode(videoEl.attributes['data-video-id'].value);
 
             if(validTo){
                 const {validTo: lastEpisodeValidToDate} = await getEpisodeByUrl(lastEpisodeEl.getElementsByTagName('a')[0].href);
 
-                //This video and the last one of the seaons got the same valid to date so we assume all videos got the same date
-                if(validTo === lastEpisodeValidToDate){
+                //This video and the last one of the seasons got the same valid to date so we assume all videos got the same date
+                //TODO handle new season with upcoming or pulled
+                if(isLastEpisodeOfSeasonAvailable && validTo === lastEpisodeValidToDate){
                     handleSeasonWithSameValidToDates(validTo, numberOfEpisodesLeft, title)
 
                 } else {
