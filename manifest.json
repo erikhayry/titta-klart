@@ -1,20 +1,23 @@
 {
 
   "manifest_version": 2,
-  "name": "Titta klart",
+  "name": "Barnvakten",
   "version": "1.0",
-  "description": "Hjälper dig att hinna se klart en serie innan den försvinner från SVT Play",
+  "description": "",
   "icons": {
     "48": "icons/logo.png",
     "96": "icons/logo@2x.png"
   },
   "content_scripts": [
     {
-      "matches": ["*://*.svtplay.se/*"],
+      "matches": [
+        "*://*.svtplay.se/*",
+        "*://*.youtube.com/*"
+      ],
       "js": [
         "/node_modules/@sentry/browser/build/bundle.min.js",
         "/node_modules/moment/min/moment.min.js",
-        "titta-klart.js"
+        "barnvakten.js"
       ]
     }
   ],
@@ -22,10 +25,17 @@
     "scripts": [
       "background-script.js"
     ]
-},
-  "permissions": [
-    "notifications",
-    "https://titta-klart-api.now.sh/",
-    "https://api.svt.se/*"
-  ]
+  },
+  "permissions": [],
+  "options_ui": {
+    "page": "ui/out/options/index.html",
+    "browser_style": true,
+    "chrome_style": true,
+    "open_in_tab": true
+  },
+  "browser_action": {
+    "default_icon": "icons/logo.png",
+    "default_title": "Barnvakt",
+    "default_popup": "ui/out/popup/index.html"
+  }
 }

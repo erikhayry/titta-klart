@@ -1,0 +1,20 @@
+{
+  "name": "options",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "next build",
+    "export": "next export",
+    "dev": "next",
+    "compile": "next build && next export"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "next": "^7.0.3",
+    "react": "^16.8.1",
+    "react-dom": "^16.8.1"
+  }
+}
